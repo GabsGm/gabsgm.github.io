@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full bg-slate-100 text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Explorador Intuitivo de Límites - Cálculo I</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Math.js para evaluación numérica -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- KaTeX CSS y JS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+
+  <style>
+    /* Estilos para barras de desplazamiento y controles deslizantes */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    input[type=range] {
+      accent-color: #4f46e5;
+    }
+    .custom-card-shadow {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+    }
+    .katex {
+      font-size: 1.05em;
+    }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <!-- Encabezado Principal -->
+  <header class="bg-white border-b border-slate-200 py-3 px-4 sm:px-6 flex flex-wrap items-center justify-between gap-4 shrink-0 shadow-sm">
+    <div class="flex items-center space-x-3">
+      <div class="p-2.5 bg-indigo-600 rounded-xl text-white shadow-md shadow-indigo-500/20 flex items-center justify-center">
+        <i class="fa-solid fa-chart-line text-lg"></i>
+      </div>
+      <div>
+        <h1 class="text-lg sm:text-xl font-bold text-slate-900 tracking-tight">
+          Explorador Intuitivo de Límites
+        </h1>
+        <p class="text-xs text-slate-500 font-medium">Herramienta didáctica para Cálculo I &bull; Acercamiento numérico y gráfico</p>
+      </div>
+    </div>
+
+    <!-- Controles de Modo Docente y Reinicio -->
+    <div class="flex items-center space-x-2.5 text-xs sm:text-sm">
+      <button id="toggleTeacherModeBtn" onclick="toggleTeacherMode()" class="px-3.5 py-2 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-all flex items-center space-x-2 shadow-sm">
+        <i class="fa-solid fa-graduation-cap text-indigo-600 text-sm"></i>
+        <span id="teacherModeLabel">Modo Docente: Desactivado</span>
+      </button>
+      <button onclick="resetAppView()" class="px-3.5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-medium transition-all shadow-sm shadow-indigo-600/30 flex items-center space-x-1.5">
+        <i class="fa-solid fa-rotate-left"></i>
+        <span>Reiniciar</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal en 2 Columnas -->
+  <main class="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-12 gap-0">
+    
+    <!-- COLUMNA IZQUIERDA: Configuración de Función y Gráfica en Canvas -->
+    <section class="lg:col-span-7 flex flex-col h-full border-r border-slate-200 bg-white overflow-y-auto">
+      
+      <!-- Panel de Controles Superiores -->
+      <div class="p-4 bg-slate-50 border-b border-slate-200 space-y-3.5">
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <!-- Selección de Funciones Predefinidas -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <i class="fa-solid fa-bookmark text-indigo-600 mr-1"></i> Función de Estudio
+            </label>
+            <select id="presetSelect" onchange="loadPreset()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-800 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm transition-all">
+              <option value="removable">f(x) = (x² - 4) / (x - 2) [Evitable en a = 2]</option>
+              <option value="sinc">f(x) = sin(x) / x [Trigonométrica en a = 0]</option>
+              <option value="piecewise">f(x) = Por partes [Salto en a = 1]</option>
+              <option value="jump">f(x) = |x - 2| / (x - 2) [Salto en a = 2]</option>
+              <option value="asymptote">f(x) = 1 / (x - 1) [Asíntota en a = 1]</option>
+              <option value="continuous">f(x) = x² - 3x + 2 [Continua en a = 3]</option>
+              <option value="custom">-- Escribir Función Personalizada --</option>
+            </select>
+          </div>
+
+          <!-- Selección del Punto de Interés 'a' (Sin la leyenda x = a) -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1.5">
+              <i class="fa-solid fa-crosshairs text-indigo-600 mr-1"></i> Punto de aproximación
+            </label>
+            <div class="flex space-x-2">
+              <input type="number" id="targetAInput" value="2" step="0.5" onchange="updateTargetA()" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shadow-sm">
+              <button onclick="updateTargetA()" title="Actualizar punto" class="px-3.5 py-2 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-lg font-medium transition-all shadow-sm">
+                <i class="fa-solid fa-check"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entrada si selecciona personalizada -->
+        <div id="customExprContainer" class="hidden space-y-2 pt-2 border-t border-slate-200">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-indigo-700">
+            Fórmula de <span id="customMathLabel">f(x)</span>: <span class="text-slate-500 capitalize font-normal text-xs">(Ej: <code>(x^2 - 9)/(x - 3)</code>, <code>sin(x)/x</code>)</span>
+          </label>
+          <div class="flex space-x-2">
+            <input type="text" id="customExprInput" value="(x^2 - 4)/(x - 2)" placeholder="Ej: (x^2 - 9)/(x - 3)" class="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm">
+            <button onclick="applyCustomExpression()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-all shadow-sm">
+              Aplicar
+            </button>
+          </div>
+        </div>
+
+        <!-- Renderizado Matemático KaTeX de la Función Activa -->
+        <div class="flex items-center justify-between bg-white px-4 py-3 rounded-lg border border-slate-200 shadow-sm">
+          <span class="text-xs text-slate-500 uppercase tracking-wider font-bold">Definición:</span>
+          <div id="mathExprRender" class="text-sm sm:text-base text-slate-900 font-semibold overflow-x-auto py-0.5 px-2"></div>
+        </div>
+
+      </div>
+
+      <!-- Contenedor del Gráfico en Alta Resolución -->
+      <div class="relative flex-1 min-h-[380px] bg-slate-50 p-2 flex flex-col justify-between">
+        
+        <!-- Canvas -->
+        <canvas id="graphCanvas" class="w-full h-full rounded-xl bg-white border border-slate-200 cursor-crosshair shadow-sm block"></canvas>
+
+        <!-- Botones Flotantes de Zoom y Vista -->
+        <div class="absolute top-4 right-4 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg p-1 flex flex-col space-y-1 shadow-md text-slate-700">
+          <button onclick="zoomGraph(0.8)" title="Acercar (Zoom In)" class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center transition-all text-sm">
+            <i class="fa-solid fa-plus"></i>
+          </button>
+          <button onclick="zoomGraph(1.25)" title="Alejar (Zoom Out)" class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center transition-all text-sm">
+            <i class="fa-solid fa-minus"></i>
+          </button>
+          <button onclick="resetGraphBounds()" title="Restablecer Vista" class="w-8 h-8 rounded hover:bg-slate-100 flex items-center justify-center transition-all text-sm">
+            <i class="fa-solid fa-expand"></i>
+          </button>
+        </div>
+
+        <!-- Leyenda Gráfica Flotante -->
+        <div class="absolute bottom-4 left-4 bg-white/95 backdrop-blur-md border border-slate-200 rounded-lg p-2.5 text-xs text-slate-700 space-y-1.5 shadow-md">
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-blue-600 inline-block shadow-sm"></span>
+            <span id="legendLeftText">Punto Móvil Izquierda</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-600 inline-block shadow-sm"></span>
+            <span id="legendRightText">Punto Móvil Derecha</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full border border-slate-400 bg-slate-300 inline-block"></span>
+            <span class="text-slate-600">Puntos Fijos de Referencia</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="w-3 h-3 rounded-full border-2 border-indigo-600 bg-white inline-block"></span>
+            <span id="legendTargetText">Línea Objetivo</span>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- COLUMNA DERECHA: Deslizadores, Tablas Numéricas y Deducciones -->
+    <section class="lg:col-span-5 flex flex-col h-full bg-slate-100 overflow-y-auto p-4 space-y-4 pb-8">
+      
+      <!-- Panel de Deslizadores de Proximidad -->
+      <div class="bg-white border border-slate-200 rounded-xl p-4 space-y-4 custom-card-shadow shrink-0">
+        
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h2 class="text-sm font-bold text-slate-800 flex items-center space-x-2">
+            <i class="fa-solid fa-sliders text-indigo-600"></i>
+            <span>Deslizadores de Aproximación</span>
+          </h2>
+          <!-- Botón de animación -->
+          <button id="animBtn" onclick="toggleApproachAnimation()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm">
+            <i id="animBtnIcon" class="fa-solid fa-play"></i>
+            <span id="animBtnText">Animar Acercamiento</span>
+          </button>
+        </div>
+
+        <!-- Deslizador Izquierda -->
+        <div class="space-y-1.5 bg-blue-50/60 p-3 rounded-lg border border-blue-100">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-blue-800 flex items-center" id="sliderLeftHeader">
+              <i class="fa-solid fa-arrow-right-to-bracket mr-1.5 text-blue-600"></i>
+              <span id="sliderLeftLabel">Izquierda (x &rarr; a&minus;)</span>
+            </span>
+            <span class="font-mono text-slate-700 font-semibold flex items-center space-x-1">
+              <span id="xlMathSymbol">x_L =</span>
+              <strong id="valXLDisplay" class="text-blue-700 text-sm ml-1">1.500000</strong>
+            </span>
+          </div>
+          <input type="range" id="sliderLeft" min="0.00001" max="1.5" step="0.0001" value="0.5" oninput="onLeftSliderInput()" class="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer accent-blue-600">
+        </div>
+
+        <!-- Deslizador Derecha -->
+        <div class="space-y-1.5 bg-emerald-50/60 p-3 rounded-lg border border-emerald-100">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-emerald-800 flex items-center" id="sliderRightHeader">
+              <i class="fa-solid fa-arrow-left-to-bracket mr-1.5 text-emerald-600"></i>
+              <span id="sliderRightLabel">Derecha (x &rarr; a+)</span>
+            </span>
+            <span class="font-mono text-slate-700 font-semibold flex items-center space-x-1">
+              <span id="xrMathSymbol">x_R =</span>
+              <strong id="valXRDisplay" class="text-emerald-700 text-sm ml-1">2.500000</strong>
+            </span>
+          </div>
+          <input type="range" id="sliderRight" min="0.00001" max="1.5" step="0.0001" value="0.5" oninput="onRightSliderInput()" class="w-full h-2 bg-emerald-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+        </div>
+
+      </div>
+
+      <!-- Tablas Numéricas de Preimágenes e Imágenes (Altura Automática y Visibilidad Completa) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 shrink-0">
+        
+        <!-- Tabla Izquierda -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col custom-card-shadow">
+          <div class="flex items-center justify-between border-b border-blue-100 pb-2 mb-2">
+            <span class="text-xs font-bold text-blue-800 flex items-center">
+              <i class="fa-solid fa-table-list mr-1.5 text-blue-600"></i>
+              <span id="tblLeftTitle">Tabla Izq. (x &lt; a)</span>
+            </span>
+            <span id="tblLeftBadge" class="text-[11px] bg-blue-100 text-blue-800 font-semibold px-2 py-0.5 rounded-full border border-blue-200">
+              x &rarr; a&minus;
+            </span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="text-slate-500 border-b border-slate-200 font-semibold">
+                  <th class="py-1.5 px-2">x</th>
+                  <th class="py-1.5 px-2 text-right">f(x)</th>
+                </tr>
+              </thead>
+              <tbody id="leftTableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Se llena dinámicamente con JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tabla Derecha -->
+        <div class="bg-white border border-slate-200 rounded-xl p-3.5 flex flex-col custom-card-shadow">
+          <div class="flex items-center justify-between border-b border-emerald-100 pb-2 mb-2">
+            <span class="text-xs font-bold text-emerald-800 flex items-center">
+              <i class="fa-solid fa-table-list mr-1.5 text-emerald-600"></i>
+              <span id="tblRightTitle">Tabla Der. (x &gt; a)</span>
+            </span>
+            <span id="tblRightBadge" class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+              x &rarr; a+
+            </span>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="text-slate-500 border-b border-slate-200 font-semibold">
+                  <th class="py-1.5 px-2">x</th>
+                  <th class="py-1.5 px-2 text-right">f(x)</th>
+                </tr>
+              </thead>
+              <tbody id="rightTableBody" class="divide-y divide-slate-100 text-slate-700">
+                <!-- Se llena dinámicamente con JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Panel de Conclusiones y Deducción del Límite -->
+      <div id="conclusionPanel" class="bg-white border border-indigo-200 rounded-xl p-4 space-y-3 custom-card-shadow relative shrink-0">
+        
+        <div class="flex items-center justify-between border-b border-slate-100 pb-2.5">
+          <h3 class="text-xs font-bold text-indigo-900 uppercase tracking-wider flex items-center">
+            <i class="fa-solid fa-brain text-indigo-600 mr-2 text-sm"></i> Deducción del Límite
+          </h3>
+          <span id="limitStatusBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+            Límite Existe
+          </span>
+        </div>
+
+        <!-- Máscara de Ocultación para Modo Docente -->
+        <div id="teacherMask" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center p-4 text-center z-10 border border-slate-300">
+          <i class="fa-solid fa-eye-slash text-2xl text-amber-500 mb-2"></i>
+          <h4 class="text-sm font-bold text-slate-900">Conclusión Oculta (Modo Docente Activo)</h4>
+          <p id="teacherMaskSub" class="text-xs text-slate-600 max-w-xs mt-1">Pregunte a los estudiantes: ¿A qué valor parecen aproximarse las imágenes f(x)?</p>
+          <button onclick="toggleTeacherMode()" class="mt-3 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs font-semibold text-white rounded-lg transition-all shadow-sm">
+            Revelar Deducción
+          </button>
+        </div>
+
+        <!-- Valores de Límites Laterales y Valor Puntual f(a) -->
+        <div class="grid grid-cols-3 gap-2.5 text-center py-1">
+          <div class="bg-blue-50/80 p-2.5 rounded-lg border border-blue-100">
+            <div id="headerLimLeft" class="text-[11px] text-blue-900 font-bold mb-1"></div>
+            <div id="leftLimitVal" class="text-sm font-bold font-mono text-blue-700"></div>
+          </div>
+          <div class="bg-amber-50/80 p-2.5 rounded-lg border border-amber-100">
+            <div id="headerPuntualA" class="text-[11px] text-amber-900 font-bold mb-1"></div>
+            <div id="evalAVal" class="text-sm font-bold font-mono text-amber-700"></div>
+          </div>
+          <div class="bg-emerald-50/80 p-2.5 rounded-lg border border-emerald-100">
+            <div id="headerLimRight" class="text-[11px] text-emerald-900 font-bold mb-1"></div>
+            <div id="rightLimitVal" class="text-sm font-bold font-mono text-emerald-700"></div>
+          </div>
+        </div>
+
+        <!-- Explicación Pedagógica en Lenguaje Natural -->
+        <div id="conclusionText" class="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-200"></div>
+
+      </div>
+
+      <!-- Pie con Nota Pedagógica -->
+      <footer id="footerNote" class="text-xs text-slate-500 text-center italic pt-1 shrink-0"></footer>
+
+    </section>
+
+  </main>
+
+  <script>
+    // Estado General
+    let state = {
+      presetKey: 'removable',
+      exprString: '(x^2 - 4)/(x - 2)',
+      a: 2,
+      deltaL: 0.5,
+      deltaR: 0.5,
+      teacherMode: false,
+      animating: false,
+      animInterval: null,
+      
+      // Límites del Plano
+      xmin: -2,
+      xmax: 6,
+      ymin: -2,
+      ymax: 8,
+      
+      // Pan
+      isDragging: false,
+      dragStart: { x: 0, y: 0 }
+    };
+
+    let compiledExpr = null;
+
+    // Utilidad de renderizado KaTeX seguro
+    function k(latex, display = false) {
+      try {
+        return katex.renderToString(latex, { displayMode: display, throwOnError: false });
+      } catch (e) {
+        return latex;
+      }
+    }
+
+    // Catálogo de Funciones Didácticas
+    const PRESETS = {
+      removable: {
+        expr: '(x^2 - 4)/(x - 2)',
+        a: 2,
+        xmin: -1, xmax: 5, ymin: -1, ymax: 7,
+        label: 'f(x) = \\frac{x^2 - 4}{x - 2}',
+        evalFn: (x) => (Math.abs(x - 2) < 1e-7 ? NaN : (x*x - 4)/(x - 2))
+      },
+      sinc: {
+        expr: 'sin(x)/x',
+        a: 0,
+        xmin: -6, xmax: 6, ymin: -1.5, ymax: 2,
+        label: 'f(x) = \\frac{\\sin(x)}{x}',
+        evalFn: (x) => (Math.abs(x) < 1e-7 ? NaN : Math.sin(x)/x)
+      },
+      piecewise: {
+        expr: 'piecewise',
+        a: 1,
+        xmin: -2, xmax: 4, ymin: -1, ymax: 6,
+        label: 'f(x) = \\begin{cases} x+1, & x < 1 \\\\ 4, & x = 1 \\\\ 3 - x^2, & x > 1 \\end{cases}',
+        evalFn: (x) => {
+          if (Math.abs(x - 1) < 1e-7) return 4;
+          if (x < 1) return x + 1;
+          return 3 - x*x;
+        }
+      },
+      jump: {
+        expr: 'abs(x - 2)/(x - 2)',
+        a: 2,
+        xmin: -1, xmax: 5, ymin: -2.5, ymax: 2.5,
+        label: 'f(x) = \\frac{|x - 2|}{x - 2}',
+        evalFn: (x) => (Math.abs(x - 2) < 1e-7 ? NaN : Math.abs(x - 2)/(x - 2))
+      },
+      asymptote: {
+        expr: '1/(x - 1)',
+        a: 1,
+        xmin: -3, xmax: 5, ymin: -8, ymax: 8,
+        label: 'f(x) = \\frac{1}{x - 1}',
+        evalFn: (x) => (Math.abs(x - 1) < 1e-7 ? NaN : 1/(x - 1))
+      },
+      continuous: {
+        expr: 'x^2 - 3*x + 2',
+        a: 3,
+        xmin: -1, xmax: 6, ymin: -2, ymax: 8,
+        label: 'f(x) = x^2 - 3x + 2',
+        evalFn: (x) => x*x - 3*x + 2
+      }
+    };
+
+    window.onload = function() {
+      setupStaticKaTeX();
+      setupCanvasEvents();
+      loadPreset();
+      window.addEventListener('resize', () => {
+        drawGraph();
+      });
+    };
+
+    function setupStaticKaTeX() {
+      const customMath = document.getElementById('customMathLabel');
+      if (customMath) customMath.innerHTML = k('f(x)');
+
+      document.getElementById('legendLeftText').innerHTML = `Aproximación Izquierda (${k('x \\to a^-')})`;
+      document.getElementById('legendRightText').innerHTML = `Aproximación Derecha (${k('x \\to a^+')})`;
+      document.getElementById('legendTargetText').innerHTML = `Línea Objetivo en ${k('x = a')}`;
+      
+      document.getElementById('sliderLeftLabel').innerHTML = `Izquierda (${k('x \\to a^-')})`;
+      document.getElementById('sliderRightLabel').innerHTML = `Derecha (${k('x \\to a^+')})`;
+      document.getElementById('xlMathSymbol').innerHTML = k('x_L =');
+      document.getElementById('xrMathSymbol').innerHTML = k('x_R =');
+
+      document.getElementById('tblLeftTitle').innerHTML = `Tabla Izq. (${k('x < a')})`;
+      document.getElementById('tblRightTitle').innerHTML = `Tabla Der. (${k('x > a')})`;
+      document.getElementById('tblLeftBadge').innerHTML = k('x \\to a^-');
+      document.getElementById('tblRightBadge').innerHTML = k('x \\to a^+');
+
+      document.getElementById('headerLimLeft').innerHTML = k('\\lim_{x \\to a^-} f(x)');
+      document.getElementById('headerPuntualA').innerHTML = `Puntual ${k('f(a)')}`;
+      document.getElementById('headerLimRight').innerHTML = k('\\lim_{x \\to a^+} f(x)');
+
+      document.getElementById('teacherMaskSub').innerHTML = `Pregunte a los estudiantes: ¿A qué valor parecen aproximarse las imágenes ${k('f(x)')} por izquierda y por derecha?`;
+      document.getElementById('footerNote').innerHTML = `<i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i><strong>Concepto Clave:</strong> El límite depende únicamente de los valores de ${k('x')} cercanos a ${k('a')}, nunca del valor puntual ${k('f(a)')}.`;
+    }
+
+    function evaluateF(x) {
+      if (state.presetKey !== 'custom' && PRESETS[state.presetKey]) {
+        return PRESETS[state.presetKey].evalFn(x);
+      }
+      
+      if (!compiledExpr) return NaN;
+      try {
+        let val = compiledExpr.evaluate({ x: x });
+        if (typeof val === 'number' && !isNaN(val) && isFinite(val)) {
+          return val;
+        }
+        return NaN;
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    function loadPreset() {
+      const select = document.getElementById('presetSelect');
+      state.presetKey = select.value;
+
+      const customContainer = document.getElementById('customExprContainer');
+      if (state.presetKey === 'custom') {
+        customContainer.classList.remove('hidden');
+        applyCustomExpression();
+        return;
+      } else {
+        customContainer.classList.add('hidden');
+      }
+
+      const preset = PRESETS[state.presetKey];
+      state.a = preset.a;
+      state.xmin = preset.xmin;
+      state.xmax = preset.xmax;
+      state.ymin = preset.ymin;
+      state.ymax = preset.ymax;
+      state.exprString = preset.expr;
+
+      document.getElementById('targetAInput').value = state.a;
+      
+      // Reiniciar sliders
+      state.deltaL = 0.5;
+      state.deltaR = 0.5;
+      document.getElementById('sliderLeft').value = 0.5;
+      document.getElementById('sliderRight').value = 0.5;
+
+      document.getElementById('mathExprRender').innerHTML = k(preset.label, true);
+
+      updateApp();
+    }
+
+    function applyCustomExpression() {
+      const exprText = document.getElementById('customExprInput').value.trim();
+      state.exprString = exprText;
+      try {
+        compiledExpr = math.compile(exprText);
+        document.getElementById('mathExprRender').innerHTML = k(`f(x) = ${exprText}`, true);
+        updateApp();
+      } catch (err) {
+        document.getElementById('mathExprRender').innerHTML = k(`\\text{Error de sintaxis en } f(x)`, true);
+      }
+    }
+
+    function updateTargetA() {
+      const val = parseFloat(document.getElementById('targetAInput').value);
+      if (!isNaN(val)) {
+        state.a = val;
+        updateApp();
+      }
+    }
+
+    function onLeftSliderInput() {
+      state.deltaL = parseFloat(document.getElementById('sliderLeft').value);
+      updateApp();
+    }
+
+    function onRightSliderInput() {
+      state.deltaR = parseFloat(document.getElementById('sliderRight').value);
+      updateApp();
+    }
+
+    function updateApp() {
+      const xL = state.a - state.deltaL;
+      const xR = state.a + state.deltaR;
+
+      document.getElementById('valXLDisplay').innerText = xL.toFixed(6);
+      document.getElementById('valXRDisplay').innerText = xR.toFixed(6);
+
+      // Renderizar tablas completas
+      updateTables(xL, xR);
+
+      // Dibujar canvas nítido en alta resolución
+      drawGraph();
+
+      // Calcular y actualizar deducción
+      updateConclusion();
+    }
+
+    function updateTables(currentXL, currentXR) {
+      const leftBody = document.getElementById('leftTableBody');
+      const rightBody = document.getElementById('rightTableBody');
+
+      if (!leftBody || !rightBody) return;
+
+      leftBody.innerHTML = '';
+      rightBody.innerHTML = '';
+
+      // Puntos fijos de referencia predeterminados
+      const fixedDeltas = [0.5, 0.2, 0.1, 0.01, 0.001];
+
+      // --- Tabla Izquierda ---
+      let pointsL = fixedDeltas.map(d => ({ delta: d, isSlider: false }));
+      const isLMatched = pointsL.some(p => Math.abs(p.delta - state.deltaL) < 1e-4);
+      if (!isLMatched) {
+        pointsL.push({ delta: state.deltaL, isSlider: true });
+      } else {
+        pointsL.forEach(p => {
+          if (Math.abs(p.delta - state.deltaL) < 1e-4) p.isSlider = true;
+        });
+      }
+      pointsL.sort((a, b) => b.delta - a.delta);
+
+      pointsL.forEach(item => {
+        const xVal = state.a - item.delta;
+        const yVal = evaluateF(xVal);
+
+        const row = document.createElement('tr');
+        if (item.isSlider) {
+          row.className = 'bg-blue-100 text-blue-950 font-bold border-l-4 border-blue-600';
+        } else {
+          row.className = 'hover:bg-slate-50 transition-colors text-slate-700';
+        }
+        
+        row.innerHTML = `
+          <td class="py-2 px-2.5 font-mono flex items-center justify-between">
+            <span>${xVal.toFixed(5)}</span>
+            ${item.isSlider ? '<span class="text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded font-sans font-semibold ml-1">Móvil</span>' : ''}
+          </td>
+          <td class="py-2 px-2.5 font-mono text-right ${isNaN(yVal) ? 'text-amber-600 font-bold' : ''}">${isNaN(yVal) ? 'Indefinido' : yVal.toFixed(5)}</td>
+        `;
+        leftBody.appendChild(row);
+      });
+
+      // --- Tabla Derecha ---
+      let pointsR = fixedDeltas.map(d => ({ delta: d, isSlider: false }));
+      const isRMatched = pointsR.some(p => Math.abs(p.delta - state.deltaR) < 1e-4);
+      if (!isRMatched) {
+        pointsR.push({ delta: state.deltaR, isSlider: true });
+      } else {
+        pointsR.forEach(p => {
+          if (Math.abs(p.delta - state.deltaR) < 1e-4) p.isSlider = true;
+        });
+      }
+      pointsR.sort((a, b) => b.delta - a.delta);
+
+      pointsR.forEach(item => {
+        const xVal = state.a + item.delta;
+        const yVal = evaluateF(xVal);
+
+        const row = document.createElement('tr');
+        if (item.isSlider) {
+          row.className = 'bg-emerald-100 text-emerald-950 font-bold border-l-4 border-emerald-600';
+        } else {
+          row.className = 'hover:bg-slate-50 transition-colors text-slate-700';
+        }
+        
+        row.innerHTML = `
+          <td class="py-2 px-2.5 font-mono flex items-center justify-between">
+            <span>${xVal.toFixed(5)}</span>
+            ${item.isSlider ? '<span class="text-[9px] bg-emerald-600 text-white px-1.5 py-0.5 rounded font-sans font-semibold ml-1">Móvil</span>' : ''}
+          </td>
+          <td class="py-2 px-2.5 font-mono text-right ${isNaN(yVal) ? 'text-amber-600 font-bold' : ''}">${isNaN(yVal) ? 'Indefinido' : yVal.toFixed(5)}</td>
+        `;
+        rightBody.appendChild(row);
+      });
+    }
+
+    function updateConclusion() {
+      const eps = 1e-5;
+      const yL = evaluateF(state.a - eps);
+      const yR = evaluateF(state.a + eps);
+      const yA = evaluateF(state.a);
+
+      const leftElem = document.getElementById('leftLimitVal');
+      const rightElem = document.getElementById('rightLimitVal');
+      const evalAElem = document.getElementById('evalAVal');
+      const badge = document.getElementById('limitStatusBadge');
+      const textElem = document.getElementById('conclusionText');
+
+      const formatVal = (v) => {
+        if (isNaN(v)) return 'Indefinido';
+        if (v > 1e4) return '+\\infty';
+        if (v < -1e4) return '-\\infty';
+        return v.toFixed(4);
+      };
+
+      const strL = formatVal(yL);
+      const strR = formatVal(yR);
+      const strA = formatVal(yA);
+
+      leftElem.innerHTML = strL === 'Indefinido' ? 'Indefinido' : k(strL);
+      rightElem.innerHTML = strR === 'Indefinido' ? 'Indefinido' : k(strR);
+      evalAElem.innerHTML = isNaN(yA) ? 'Indefinido' : k(strA);
+
+      const limitsEqual = !isNaN(yL) && !isNaN(yR) && Math.abs(yL - yR) < 1e-3 && Math.abs(yL) < 1e4 && Math.abs(yR) < 1e4;
+      const infiniteLimit = Math.abs(yL) > 1e4 || Math.abs(yR) > 1e4;
+
+      if (limitsEqual) {
+        badge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200";
+        badge.innerText = "Límite Existe";
+
+        const L = ((yL + yR) / 2).toFixed(4);
+        let note = `Como los límites laterales coinciden en el mismo valor real (${k(`${strL} = ${strR}`)}), se concluye que:
+        <div class="text-center font-bold text-indigo-900 my-2 text-sm bg-indigo-50/70 p-2 rounded border border-indigo-100">
+          ${k(`\\lim_{x \\to ${state.a}} f(x) = ${L}`, true)}
+        </div>`;
+
+        if (isNaN(yA)) {
+          note += `<p class="mt-1"><strong class="text-amber-700">Discontinuidad Evitable:</strong> La función <em>no está definida</em> en ${k(`x = ${state.a}`)}, pero el límite <strong>sí existe</strong> y es ${k(L)}. Esto comprueba que el límite describe la tendencia cercana, no el valor puntual.</p>`;
+        } else if (Math.abs(yA - parseFloat(L)) > 1e-3) {
+          note += `<p class="mt-1"><strong class="text-amber-700">Discontinuidad de Punto Aislado:</strong> Aunque ${k(`f(${state.a}) = ${strA}`)}, el límite es ${k(L)}. El valor puntual no coincide con la tendencia.</p>`;
+        } else {
+          note += `<p class="mt-1"><strong class="text-emerald-700">Función Continua en ${k(`x = ${state.a}`)}:</strong> El límite bilateral coincide exactamente con la imagen puntual ${k(`f(${state.a}) = ${strA}`)}.</p>`;
+        }
+        textElem.innerHTML = note;
+
+      } else if (infiniteLimit) {
+        badge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200";
+        badge.innerText = "Límite Infinito / No Existe";
+
+        textElem.innerHTML = `Al aproximarse a ${k(`x = ${state.a}`)}, las imágenes crecen o decrecen sin cota (${k(strL)} por la izquierda y ${k(strR)} por la derecha). Existe una <strong>asíntota vertical</strong> en ${k(`x = ${state.a}`)}.`;
+
+      } else {
+        badge.className = "text-xs font-semibold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200";
+        badge.innerText = "Límite NO Existe";
+
+        textElem.innerHTML = `Los límites laterales difieren entre sí:
+        <div class="my-1.5 text-center text-rose-800 font-semibold">
+          ${k(`\\lim_{x \\to ${state.a}^-} f(x) = ${strL} \\quad \\neq \\quad \\lim_{x \\to ${state.a}^+} f(x) = ${strR}`, true)}
+        </div>
+        Dado que los límites por izquierda y por derecha no son iguales, <strong>el límite bilateral no existe</strong> (Salto finito).`;
+      }
+    }
+
+    // Coordenadas
+    function toScreenX(x, width) {
+      return ((x - state.xmin) / (state.xmax - state.xmin)) * width;
+    }
+
+    function toScreenY(y, height) {
+      return height - ((y - state.ymin) / (state.ymax - state.ymin)) * height;
+    }
+
+    function toMathX(px, width) {
+      return state.xmin + (px / width) * (state.xmax - state.xmin);
+    }
+
+    function toMathY(py, height) {
+      return state.ymin + ((height - py) / height) * (state.ymax - state.ymin);
+    }
+
+    // Dibujo del Canvas en Alta Definición (Retina / Sharp Rendering)
+    function drawGraph() {
+      const canvas = document.getElementById('graphCanvas');
+      if (!canvas) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Configuración de buffer para alta resolución
+      canvas.width = Math.round(rect.width * dpr);
+      canvas.height = Math.round(rect.height * dpr);
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const width = rect.width;
+      const height = rect.height;
+
+      ctx.clearRect(0, 0, width, height);
+
+      // Fondo blanco
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      // 1. Cuadrícula y Ejes
+      drawGridAndAxes(ctx, width, height);
+
+      // 2. Curva de la Función f(x)
+      drawFunctionCurve(ctx, width, height);
+
+      // 3. Línea vertical de referencia en x = a
+      const screenA = toScreenX(state.a, width);
+      ctx.beginPath();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 1.8;
+      ctx.moveTo(screenA, 0);
+      ctx.lineTo(screenA, height);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 4. Puntos Fijos de Referencia en la Gráfica
+      drawFixedPoints(ctx, width, height);
+
+      // 5. Puntos Móviles de Aproximación
+      const xL = state.a - state.deltaL;
+      const yL = evaluateF(xL);
+      drawApproachPoint(ctx, width, height, xL, yL, '#2563eb');
+
+      const xR = state.a + state.deltaR;
+      const yR = evaluateF(xR);
+      drawApproachPoint(ctx, width, height, xR, yR, '#059669');
+
+      // 6. Agujero o Punto Singular en x = a
+      drawSingularityPoint(ctx, width, height);
+    }
+
+    function drawFixedPoints(ctx, width, height) {
+      const fixedDeltas = [0.5, 0.2, 0.1, 0.01];
+      fixedDeltas.forEach(delta => {
+        // Punto fijo izquierda
+        const xL = state.a - delta;
+        const yL = evaluateF(xL);
+        if (!isNaN(yL) && isFinite(yL)) {
+          const sx = toScreenX(xL, width);
+          const sy = toScreenY(yL, height);
+          if (sx >= 0 && sx <= width && sy >= 0 && sy <= height) {
+            ctx.beginPath();
+            ctx.fillStyle = '#93c5fd';
+            ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#1d4ed8';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+        }
+
+        // Punto fijo derecha
+        const xR = state.a + delta;
+        const yR = evaluateF(xR);
+        if (!isNaN(yR) && isFinite(yR)) {
+          const sx = toScreenX(xR, width);
+          const sy = toScreenY(yR, height);
+          if (sx >= 0 && sx <= width && sy >= 0 && sy <= height) {
+            ctx.beginPath();
+            ctx.fillStyle = '#6ee7b7';
+            ctx.arc(sx, sy, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#047857';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+          }
+        }
+      });
+    }
+
+    function drawGridAndAxes(ctx, width, height) {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px sans-serif';
+
+      const xStep = calculateStep(state.xmax - state.xmin);
+      const startX = Math.floor(state.xmin / xStep) * xStep;
+
+      for (let x = startX; x <= state.xmax; x += xStep) {
+        const sx = toScreenX(x, width);
+        ctx.beginPath();
+        ctx.moveTo(sx, 0);
+        ctx.lineTo(sx, height);
+        ctx.stroke();
+
+        if (Math.abs(x) > 1e-5) {
+          const sy0 = Math.max(16, Math.min(height - 8, toScreenY(0, height) + 14));
+          ctx.fillText(x.toFixed(xStep < 1 ? 1 : 0), sx - 6, sy0);
+        }
+      }
+
+      const yStep = calculateStep(state.ymax - state.ymin);
+      const startY = Math.floor(state.ymin / yStep) * yStep;
+
+      for (let y = startY; y <= state.ymax; y += yStep) {
+        const sy = toScreenY(y, height);
+        ctx.beginPath();
+        ctx.moveTo(0, sy);
+        ctx.lineTo(width, sy);
+        ctx.stroke();
+
+        if (Math.abs(y) > 1e-5) {
+          const sx0 = Math.max(6, Math.min(width - 20, toScreenX(0, width) + 6));
+          ctx.fillText(y.toFixed(yStep < 1 ? 1 : 0), sx0, sy + 4);
+        }
+      }
+
+      // Ejes Principales X e Y
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1.6;
+
+      // Eje X
+      const sy0 = toScreenY(0, height);
+      ctx.beginPath();
+      ctx.moveTo(0, sy0);
+      ctx.lineTo(width, sy0);
+      ctx.stroke();
+
+      // Eje Y
+      const sx0 = toScreenX(0, width);
+      ctx.beginPath();
+      ctx.moveTo(sx0, 0);
+      ctx.lineTo(sx0, height);
+      ctx.stroke();
+    }
+
+    function calculateStep(range) {
+      if (range <= 3) return 0.5;
+      if (range <= 10) return 1;
+      if (range <= 25) return 2;
+      return 5;
+    }
+
+    function drawFunctionCurve(ctx, width, height) {
+      ctx.beginPath();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#0284c7';
+
+      const samples = Math.floor(width);
+      let isDrawing = false;
+
+      for (let i = 0; i <= samples; i++) {
+        const mathX = toMathX(i, width);
+        const mathY = evaluateF(mathX);
+
+        if (isNaN(mathY) || !isFinite(mathY) || mathY < state.ymin - 20 || mathY > state.ymax + 20) {
+          isDrawing = false;
+          continue;
+        }
+
+        const sx = i;
+        const sy = toScreenY(mathY, height);
+
+        if (!isDrawing) {
+          ctx.moveTo(sx, sy);
+          isDrawing = true;
+        } else {
+          ctx.lineTo(sx, sy);
+        }
+      }
+      ctx.stroke();
+    }
+
+    function drawApproachPoint(ctx, width, height, mathX, mathY, color) {
+      if (isNaN(mathY) || !isFinite(mathY)) return;
+
+      const sx = toScreenX(mathX, width);
+      const sy = toScreenY(mathY, height);
+      const sy0 = toScreenY(0, height);
+      const sx0 = toScreenX(0, width);
+
+      // Proyecciones Punteadas
+      ctx.beginPath();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.3;
+      
+      // Vertical al eje X
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx, sy0);
+
+      // Horizontal al eje Y
+      ctx.moveTo(sx, sy);
+      ctx.lineTo(sx0, sy);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Punto sobre la curva
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc(sx, sy, 6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawSingularityPoint(ctx, width, height) {
+      const eps = 1e-4;
+      const yL = evaluateF(state.a - eps);
+      const yR = evaluateF(state.a + eps);
+      const yA = evaluateF(state.a);
+
+      const screenA = toScreenX(state.a, width);
+
+      // Discontinuidad Removible (Agujero hueco)
+      if (isNaN(yA)) {
+        if (!isNaN(yL) && !isNaN(yR) && Math.abs(yL - yR) < 1e-2) {
+          const limitVal = (yL + yR) / 2;
+          const screenL = toScreenY(limitVal, height);
+
+          ctx.beginPath();
+          ctx.fillStyle = '#ffffff';
+          ctx.arc(screenA, screenL, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#e11d48';
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        }
+      } else {
+        // Punto puntual
+        const screenYA = toScreenY(yA, height);
+        ctx.beginPath();
+        ctx.fillStyle = '#d97706';
+        ctx.arc(screenA, screenYA, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    function setupCanvasEvents() {
+      const canvas = document.getElementById('graphCanvas');
+
+      canvas.addEventListener('mousedown', (e) => {
+        state.isDragging = true;
+        state.dragStart = { x: e.clientX, y: e.clientY };
+      });
+
+      canvas.addEventListener('mousemove', (e) => {
+        if (!state.isDragging) return;
+
+        const dx = e.clientX - state.dragStart.x;
+        const dy = e.clientY - state.dragStart.y;
+        state.dragStart = { x: e.clientX, y: e.clientY };
+
+        const rect = canvas.getBoundingClientRect();
+        const mathDx = (dx / rect.width) * (state.xmax - state.xmin);
+        const mathDy = (dy / rect.height) * (state.ymax - state.ymin);
+
+        state.xmin -= mathDx;
+        state.xmax -= mathDx;
+        state.ymin += mathDy;
+        state.ymax += mathDy;
+
+        drawGraph();
+      });
+
+      window.addEventListener('mouseup', () => {
+        state.isDragging = false;
+      });
+
+      canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const factor = e.deltaY > 0 ? 1.1 : 0.9;
+        zoomGraph(factor);
+      }, { passive: false });
+    }
+
+    function zoomGraph(factor) {
+      const xCenter = (state.xmin + state.xmax) / 2;
+      const yCenter = (state.ymin + state.ymax) / 2;
+      const xHalf = ((state.xmax - state.xmin) / 2) * factor;
+      const yHalf = ((state.ymax - state.ymin) / 2) * factor;
+
+      state.xmin = xCenter - xHalf;
+      state.xmax = xCenter + xHalf;
+      state.ymin = yCenter - yHalf;
+      state.ymax = yCenter + yHalf;
+
+      drawGraph();
+    }
+
+    function resetGraphBounds() {
+      if (PRESETS[state.presetKey]) {
+        state.xmin = PRESETS[state.presetKey].xmin;
+        state.xmax = PRESETS[state.presetKey].xmax;
+        state.ymin = PRESETS[state.presetKey].ymin;
+        state.ymax = PRESETS[state.presetKey].ymax;
+      } else {
+        state.xmin = -5; state.xmax = 5;
+        state.ymin = -5; state.ymax = 5;
+      }
+      drawGraph();
+    }
+
+    function toggleApproachAnimation() {
+      state.animating = !state.animating;
+
+      const btn = document.getElementById('animBtn');
+      const icon = document.getElementById('animBtnIcon');
+      const text = document.getElementById('animBtnText');
+
+      if (state.animating) {
+        icon.className = "fa-solid fa-pause";
+        text.innerText = "Pausar Animación";
+        btn.className = "px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm";
+
+        state.animInterval = setInterval(() => {
+          let sliderL = document.getElementById('sliderLeft');
+          let sliderR = document.getElementById('sliderRight');
+
+          let valL = parseFloat(sliderL.value);
+          let valR = parseFloat(sliderR.value);
+
+          valL = valL * 0.92;
+          valR = valR * 0.92;
+
+          if (valL < 0.0001) valL = 1.2;
+          if (valR < 0.0001) valR = 1.2;
+
+          sliderL.value = valL;
+          sliderR.value = valR;
+
+          state.deltaL = valL;
+          state.deltaR = valR;
+
+          updateApp();
+        }, 60);
+
+      } else {
+        clearInterval(state.animInterval);
+        icon.className = "fa-solid fa-play";
+        text.innerText = "Animar Acercamiento";
+        btn.className = "px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 shadow-sm";
+      }
+    }
+
+    function toggleTeacherMode() {
+      state.teacherMode = !state.teacherMode;
+      const mask = document.getElementById('teacherMask');
+      const label = document.getElementById('teacherModeLabel');
+
+      if (state.teacherMode) {
+        mask.classList.remove('hidden');
+        label.innerText = "Modo Docente: Activado";
+      } else {
+        mask.classList.add('hidden');
+        label.innerText = "Modo Docente: Desactivado";
+      }
+    }
+
+    function resetAppView() {
+      if (state.animating) toggleApproachAnimation();
+      loadPreset();
+    }
+  </script>
+</body>
+</html>
